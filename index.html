@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>밥알이야</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700;900&display=swap');
+
+:root {
+  --gochu:#E1492B; --gochu2:#BF3A20;
+  --soot:#2A241D; --soft:#7A6E63;
+  --rice:#FBF6EC; --rice2:#F2E8D5;
+  --line:#E8DECE; --card:#FFFFFF;
+  --green:#7C9A3B;
+  --sh1:0 2px 12px rgba(60,45,25,.07);
+  --sh2:0 8px 28px rgba(60,45,25,.11);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#E8DFD0;font-family:'Noto Sans KR',sans-serif;color:var(--soot)}
+
+.phone{max-width:430px;margin:0 auto;min-height:100vh;background:var(--rice);
+  display:flex;flex-direction:column;position:relative;overflow:hidden;
+  box-shadow:0 0 80px rgba(40,28,12,.22)}
+@media(min-width:480px){.phone{margin:20px auto;min-height:calc(100vh - 40px);border-radius:36px}}
+
+/* 상단 */
+.topbar{padding:16px 18px 12px;background:var(--rice);position:sticky;top:0;z-index:30;
+  display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.logo{font-family:'Jua';font-size:22px;color:var(--gochu);letter-spacing:-.3px}
+.logo small{font-family:'Noto Sans KR';font-size:9px;font-weight:600;color:var(--soft);letter-spacing:2px;display:block;margin-top:-3px}
+.user-btn{display:flex;align-items:center;gap:6px;background:var(--soot);color:#fff;
+  border-radius:99px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;border:none;font-family:'Noto Sans KR'}
+.user-btn .sg{font-family:'Jua';color:#E8C36A}
+
+.scroll{flex:1;overflow-y:auto;padding-bottom:88px}
+.pad{padding:16px 18px}
+
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;padding:18px 18px 10px}
+.sec-t{font-family:'Jua';font-size:17px;letter-spacing:-.3px}
+.sec-sub{font-size:11px;color:var(--soft);font-weight:700}
+
+/* 인사 */
+.greet-wrap{padding:16px 18px 4px}
+.greet{font-family:'Jua';font-size:21px;letter-spacing:-.4px;line-height:1.35}
+.greet em{color:var(--gochu);font-style:normal}
+.greet-sub{font-size:12px;color:var(--soft);margin-top:5px}
+
+/* 카드 공통 */
+.card{margin:0 18px 10px;background:var(--card);border:1px solid var(--line);
+  border-radius:18px;padding:14px 15px;box-shadow:var(--sh1);cursor:pointer;transition:transform .13s}
+.card:active{transform:scale(.985)}
+.rname{font-weight:800;font-size:15.5px;letter-spacing:-.3px}
+.rmeta{font-size:11px;color:var(--soft);margin-top:2px}
+.badge{display:inline-block;background:var(--gochu);color:#fff;font-size:9.5px;font-weight:700;
+  padding:2px 8px;border-radius:99px;margin-left:6px;vertical-align:2px}
+.badge.g{background:var(--green)}
+.memo-line{font-size:12px;color:#5a4f44;background:var(--rice2);border-radius:9px;
+  padding:7px 10px;margin-top:9px;line-height:1.5;border-left:3px solid var(--gochu)}
+.reason{display:inline-flex;align-items:center;gap:4px;background:#E8F3DA;color:#4a7a1e;
+  border-radius:99px;padding:4px 10px;font-size:11px;font-weight:700;margin-top:9px}
+
+/* 밥알 도트 */
+.grainbar{display:flex;gap:9px;flex-wrap:wrap;margin-top:10px}
+.gb{display:flex;align-items:center;gap:4px;font-size:10px;color:var(--soft);font-weight:700}
+.dots{display:flex;gap:1.5px}
+.dg{width:8px;height:12px;border-radius:50% 50% 48% 48%/62% 62% 38% 38%;
+  transform:rotate(-12deg);border:1.2px solid;display:inline-block}
+
+/* 빈 상태 */
+.empty{text-align:center;padding:28px 24px;color:var(--soft);font-size:13px;line-height:1.8}
+.empty .big{font-size:36px;margin-bottom:8px}
+.empty b{color:var(--gochu)}
+
+/* 버튼 */
+.btn-p{width:100%;background:linear-gradient(140deg,var(--gochu),var(--gochu2));color:#fff;
+  border:none;border-radius:15px;padding:16px;font-family:'Jua';font-size:16px;cursor:pointer;
+  box-shadow:0 5px 18px rgba(225,73,43,.26);transition:.13s}
+.btn-p:active{transform:scale(.985)}
+.btn-p:disabled{background:#D8C9B2;box-shadow:none}
+.btn-s{width:100%;background:var(--rice2);color:var(--soot);border:none;border-radius:15px;
+  padding:14px;font-family:'Jua';font-size:14px;cursor:pointer}
+.btn-row{display:flex;gap:8px}
+.btn-row>*{flex:1}
+
+/* 입력 */
+.field{margin-bottom:13px}
+.field label{display:block;font-weight:700;font-size:12.5px;margin-bottom:7px;color:var(--soft)}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:13px;
+  padding:12px 14px;font-family:'Noto Sans KR';font-size:14px;background:var(--card);color:var(--soot);outline:none}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--gochu)}
+.field textarea{resize:none;height:74px}
+
+/* 태그 칩 */
+.chips{display:flex;flex-wrap:wrap;gap:7px}
+.chip{padding:7px 13px;border-radius:99px;border:1.5px solid var(--line);background:var(--card);
+  font-size:12px;font-weight:700;color:var(--soft);cursor:pointer;transition:.12s;font-family:'Noto Sans KR'}
+.chip.on{border-color:var(--gochu);background:var(--gochu);color:#fff}
+
+/* 점수 행 */
+.score-row{background:var(--card);border:1px solid var(--line);border-radius:13px;
+  padding:11px 13px;margin-bottom:8px}
+.score-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}
+.score-nm{font-weight:700;font-size:13px}
+.score-nm small{font-size:10px;color:var(--soft);font-weight:500;margin-left:4px}
+.score-v{font-family:'Jua';font-size:14px;color:var(--gochu)}
+.gpick{display:flex;gap:7px}
+.gpick .dg{width:26px;height:35px;border-width:2px;cursor:pointer;transition:transform .1s}
+.gpick .dg:active{transform:rotate(-12deg) scale(.85)}
+
+/* 밥일기 카드 */
+.diary-card{background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;
+  box-shadow:var(--sh1);margin:0 18px 12px}
+.diary-head{background:linear-gradient(145deg,var(--soot),#403526);color:#fff;padding:16px 18px 13px;position:relative;overflow:hidden}
+.diary-head::after{content:"🍚";position:absolute;right:-6px;bottom:-14px;font-size:70px;opacity:.1}
+.diary-badge{display:inline-block;background:rgba(255,255,255,.12);border-radius:99px;
+  padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:1px;color:#E8C36A;margin-bottom:7px}
+.diary-rname{font-family:'Jua';font-size:19px}
+.diary-meta{font-size:10.5px;color:rgba(255,255,255,.7);margin-top:3px}
+.diary-body{padding:16px 18px;font-size:13.5px;line-height:1.8;color:#3d362c;min-height:60px}
+.cursor{display:inline-block;width:2px;height:1em;background:var(--gochu);vertical-align:text-bottom;margin-left:2px;animation:blink .7s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+/* 지갑 */
+.wallet{background:linear-gradient(150deg,var(--soot),#3c2e1e);border-radius:22px;padding:22px;
+  color:#fff;box-shadow:var(--sh2);text-align:center;position:relative;overflow:hidden;margin:0 18px 14px}
+.wallet::after{content:"🌾";position:absolute;right:-6px;bottom:-16px;font-size:86px;opacity:.1}
+.wallet .cap{font-size:11px;letter-spacing:2px;color:rgba(255,255,255,.65)}
+.wallet .amt{font-family:'Jua';font-size:48px;color:#E8C36A;line-height:1.2}
+.wallet .sub{font-size:11.5px;color:rgba(255,255,255,.7);margin-top:3px}
+
+/* 랭킹 */
+.rank-item{display:flex;align-items:center;gap:11px;padding:11px 0;border-bottom:1px dashed var(--line)}
+.rank-item:last-child{border-bottom:none}
+.rank-no{font-family:'Jua';font-size:16px;color:var(--gochu);min-width:22px}
+.rank-info{flex:1}
+.rank-nick{font-weight:700;font-size:13.5px}
+.rank-meta{font-size:10.5px;color:var(--soft)}
+.rank-sg{font-family:'Jua';font-size:13px;color:var(--soot)}
+
+/* 탭바 */
+.tabbar{position:absolute;bottom:0;left:0;right:0;display:flex;background:rgba(255,255,255,.97);
+  border-top:1px solid var(--line);padding:8px 0 calc(8px + env(safe-area-inset-bottom));backdrop-filter:blur(12px);z-index:40}
+.tab{flex:1;text-align:center;font-size:10px;color:var(--soft);font-weight:700;border:none;background:none;cursor:pointer;font-family:'Noto Sans KR'}
+.tab .ti{font-size:20px;display:block;margin-bottom:2px;filter:grayscale(1);opacity:.45}
+.tab.on{color:var(--gochu)}
+.tab.on .ti{filter:none;opacity:1}
+
+/* 토스트 */
+.toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%) translateY(16px);
+  background:var(--soot);color:#fff;padding:11px 18px;border-radius:13px;font-size:12.5px;font-weight:700;
+  opacity:0;transition:.28s;z-index:99;pointer-events:none;max-width:85%;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* 로딩 */
+.spin{display:inline-block;width:14px;height:14px;border:2.5px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.loading-note{text-align:center;font-size:12px;color:var(--soft);padding:20px}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="topbar">
+    <div class="logo">밥알이야 <small>BABALEEYA</small></div>
+    <button class="user-btn" id="userBtn">🍙 <span id="uNick">...</span> <span class="sg" id="uSg">0가마</span></button>
+  </div>
+
+  <div class="scroll" id="scroll">
+    <div class="loading-note" id="bootNote">🍚 밥알 데이터 불러오는 중...</div>
+    <div id="viewRoot"></div>
+  </div>
+
+  <div class="tabbar">
+    <button class="tab on" data-v="home" onclick="go('home')"><span class="ti">🍚</span>오늘 밥</button>
+    <button class="tab" data-v="places" onclick="go('places')"><span class="ti">🍱</span>공기밥</button>
+    <button class="tab" data-v="write" onclick="go('write')"><span class="ti">✍️</span>밥알 남기기</button>
+    <button class="tab" data-v="my" onclick="go('my')"><span class="ti">📖</span>내 밥역사</button>
+    <button class="tab" data-v="wallet" onclick="go('wallet')"><span class="ti">🌾</span>쌀가마</button>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<!-- Firebase (compat SDK: 일반 <script> 전역 스코프와 그대로 호환) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<script>
+/* ══════════ 상수 ══════════ */
+const GR = [
+  {k:'taste',  n:'맛',    g:'백미',   c:'#E2B25A', bg:'#FBF6EC'},
+  {k:'vibe',   n:'분위기', g:'완두콩', c:'#6E9636', bg:'#8FB94A'},
+  {k:'clean',  n:'청결',  g:'현미',   c:'#8C5F30', bg:'#B5824B'},
+  {k:'access', n:'접근성', g:'흑미',   c:'#2A2540', bg:'#423B5A'},
+  {k:'service',n:'서비스', g:'누룽지', c:'#B5751F', bg:'#D9963A'},
+  {k:'value',  n:'가성비', g:'보리',   c:'#A8915A', bg:'#CBB67E'},
+];
+const TAGS = ['혼밥','둘이','여럿이','점심','저녁','야식','1만원이하','재방문의사','데이트','회식'];
+const SG_MEMO = 30;
+const CATS = ['한식','일식','양식','중식','분식','카페·브런치','호프·안주','편의점','배달','기타'];
+
+/* ══════════ 상태 ══════════ */
+let S = { nick:null, sg:0, view:'home', currentPid:null, places:[], reviews:[], draft:null, loaded:false };
+const $ = id => document.getElementById(id);
+const root = () => $('viewRoot');
+
+/* ══════════ Firebase Firestore 연동 ══════════ */
+const firebaseConfig = {
+  apiKey: "AIzaSyD1-2RwUWrWT5D1gGzGLAQHRTZlr8GZeZ8",
+  authDomain: "babal-iya.firebaseapp.com",
+  projectId: "babal-iya",
+  storageBucket: "babal-iya.firebasestorage.app",
+  messagingSenderId: "21704089730",
+  appId: "1:21704089730:web:fd567c9f8694fd0501949b",
+  measurementId: "G-9BC3EZYD13"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// places / reviews 는 모든 사용자가 공유하는 컬렉션 — 실시간 리스너로 동기화
+let placesLoaded = false, reviewsLoaded = false;
+function checkBoot(){
+  if(placesLoaded && reviewsLoaded && !S.loaded){
+    S.loaded = true;
+    $('bootNote').style.display = 'none';
+    renderHome();
+  }
+}
+function onSharedDataChange(){
+  if(!S.loaded) return;
+  if(S.view==='write') return; // 입력 중인 화면은 실시간 갱신으로 방해하지 않음
+  if(S.view==='placeDetail' && S.currentPid){ openPlace(S.currentPid, true); return; }
+  if(S.view==='home') renderHome();
+  else if(S.view==='places') renderPlaces();
+  else if(S.view==='my') renderMy();
+  else if(S.view==='wallet') renderWallet();
+}
+db.collection('places').orderBy('ts','desc').onSnapshot(snap=>{
+  S.places = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  placesLoaded = true;
+  checkBoot();
+  onSharedDataChange();
+}, err=>{ console.error(err); toast('식당 목록을 불러오지 못했어요'); });
+
+db.collection('reviews').orderBy('ts','desc').onSnapshot(snap=>{
+  S.reviews = snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  reviewsLoaded = true;
+  checkBoot();
+  onSharedDataChange();
+}, err=>{ console.error(err); toast('밥알 목록을 불러오지 못했어요'); });
+
+/* ══════════ 집계 ══════════ */
+function placeReviews(pid){ return S.reviews.filter(r=>r.pid===pid); }
+function myReviews(){ return S.reviews.filter(r=>r.nick===S.nick); }
+function aggScores(pid){
+  const rs = placeReviews(pid);
+  if(!rs.length) return null;
+  const out = {};
+  GR.forEach(g=>{
+    let sum=0,n=0;
+    rs.forEach(r=>{ if(r.scores && r.scores[g.k]){ sum+=r.scores[g.k]; n++; } });
+    out[g.k] = n ? sum/n : 0;
+  });
+  return out;
+}
+function avgAll(pid){
+  const a = aggScores(pid);
+  if(!a) return 0;
+  const vals = GR.map(g=>a[g.k]).filter(v=>v>0);
+  return vals.length ? vals.reduce((s,v)=>s+v,0)/vals.length : 0;
+}
+function topGrains(scores, n=3){
+  return GR.slice().sort((a,b)=>(scores[b.k]||0)-(scores[a.k]||0)).slice(0,n).filter(g=>(scores[g.k]||0)>0);
+}
+
+/* ══════════ 렌더 헬퍼 ══════════ */
+function esc(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function fmt(ts){ const d=new Date(ts); return `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`; }
+function dotsHTML(g, val, big=false){
+  let h = `<span class="dots">`;
+  const n = Math.round(val);
+  for(let i=1;i<=5;i++){
+    h += `<span class="dg${big?' ':''}" style="background:${i<=n?g.bg:'transparent'};border-color:${g.c};opacity:${i<=n?1:.25}"></span>`;
+  }
+  return h+`</span>`;
+}
+function grainbarHTML(scores, max=3){
+  const tops = topGrains(scores, max);
+  if(!tops.length) return '';
+  return `<div class="grainbar">${tops.map(g=>
+    `<span class="gb">${g.g}(${g.n}) ${dotsHTML(g, scores[g.k])}</span>`).join('')}</div>`;
+}
+function toast(m){ const t=$('toast'); t.innerHTML=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2400); }
+function updateTop(){ $('uNick').textContent=S.nick||'손님'; $('uSg').textContent=S.sg+'가마'; }
+
+/* ══════════ 화면: 홈 ══════════ */
+function renderHome(){
+  const h = new Date().getHours();
+  const meal = h<10?'아침':h<14?'점심':h<17?'오후 한 끼':h<21?'저녁':'야식';
+  const mine = myReviews();
+  const myPids = [...new Set(mine.map(r=>r.pid))];
+
+  let html = `<div class="greet-wrap">
+    <div class="greet">${S.nick}님, 오늘 ${meal}은<br><em>어떤 밥</em>이 당길까요?</div>
+    <div class="greet-sub">밥알 ${S.reviews.length}개 · 공기밥 ${S.places.length}그릇 · 밥알이 ${new Set(S.reviews.map(r=>r.nick)).size}명이 함께 쌓는 중</div>
+  </div>`;
+
+  /* 내 밥기록 */
+  html += `<div class="sec-h"><div class="sec-t">🍚 다시 먹고 싶은 내 밥</div><div class="sec-sub" onclick="go('my')">전체 보기</div></div>`;
+  if(!myPids.length){
+    html += `<div class="empty"><div class="big">🍚</div>아직 내 밥기록이 없어요.<br><b>첫 밥알</b>을 남기면 여기가 채워져요!</div>
+      <div style="padding:0 18px 6px"><button class="btn-p" onclick="go('write')">✍️ 첫 밥알 남기기 (+${SG_MEMO}가마)</button></div>`;
+  } else {
+    // 내가 기록한 곳 중 만족도 높은 순 3개
+    const scored = myPids.map(pid=>{
+      const p = S.places.find(x=>x.id===pid);
+      const myRevs = mine.filter(r=>r.pid===pid);
+      const latest = myRevs[0];
+      const avg = GR.map(g=>latest.scores[g.k]||0).filter(v=>v>0);
+      return { p, latest, avg: avg.length?avg.reduce((s,v)=>s+v,0)/avg.length:0 };
+    }).filter(x=>x.p).sort((a,b)=>b.avg-a.avg).slice(0,3);
+
+    scored.forEach(({p, latest, avg})=>{
+      const revisit = (latest.tags||[]).includes('재방문의사');
+      html += `<div class="card" onclick="openPlace('${p.id}')">
+        <div class="rname">${esc(p.name)}${revisit?'<span class="badge">재방문 추천</span>':''}</div>
+        <div class="rmeta">${esc(p.cat)} · ${esc(p.area||'')} · 내 만족도 ${avg.toFixed(1)} · ${fmt(latest.ts)}</div>
+        ${latest.memo?`<div class="memo-line">💬 ${esc(latest.memo)}</div>`:''}
+        ${grainbarHTML(latest.scores)}
+      </div>`;
+    });
+  }
+
+  /* 아직 안 먹어본 공기밥 */
+  const notMine = S.places.filter(p=>!myPids.includes(p.id) && placeReviews(p.id).length>0);
+  html += `<div class="sec-h"><div class="sec-t">🍱 아직 안 먹어본 공기밥</div><div class="sec-sub" onclick="go('places')">전체 보기</div></div>`;
+  if(!notMine.length){
+    html += `<div class="empty">친구들이 밥알을 남기면<br>여기에 <b>새 공기밥</b>이 나타나요.<br><span style="font-size:11px">이 페이지 링크를 친구에게 공유해보세요!</span></div>`;
+  } else {
+    notMine.sort((a,b)=>avgAll(b.id)-avgAll(a.id)).slice(0,3).forEach(p=>{
+      const rs = placeReviews(p.id);
+      const ag = aggScores(p.id);
+      const who = [...new Set(rs.map(r=>r.nick))];
+      html += `<div class="card" onclick="openPlace('${p.id}')">
+        <div class="rname">${esc(p.name)}</div>
+        <div class="rmeta">${esc(p.cat)} · ${esc(p.area||'')} · 공기밥 ${avgAll(p.id).toFixed(1)}</div>
+        <div class="reason">✦ ${who.slice(0,2).map(esc).join('·')}${who.length>2?` 외 ${who.length-2}명`:''}이 밥알 남김</div>
+        ${ag?grainbarHTML(ag):''}
+      </div>`;
+    });
+  }
+  root().innerHTML = html;
+}
+
+/* ══════════ 화면: 공기밥 목록 ══════════ */
+function renderPlaces(){
+  let html = `<div class="sec-h"><div class="sec-t">🍱 우리가 쌓은 공기밥</div>
+    <div class="sec-sub">${S.places.length}그릇</div></div>`;
+  html += `<div style="padding:0 18px 12px"><button class="btn-s" onclick="promptNewPlace()">+ 새 식당 등록하기</button></div>`;
+  if(!S.places.length){
+    html += `<div class="empty"><div class="big">🍱</div>아직 등록된 식당이 없어요.<br><b>첫 식당</b>을 등록하고 밥알을 남겨보세요!</div>`;
+  } else {
+    const sorted = S.places.slice().sort((a,b)=>avgAll(b.id)-avgAll(a.id));
+    sorted.forEach(p=>{
+      const rs = placeReviews(p.id);
+      const ag = aggScores(p.id);
+      html += `<div class="card" onclick="openPlace('${p.id}')">
+        <div class="rname">${esc(p.name)}${rs.length?`<span class="badge g">밥알 ${rs.length}</span>`:''}</div>
+        <div class="rmeta">${esc(p.cat)} · ${esc(p.area||'')} ${rs.length?`· 공기밥 ${avgAll(p.id).toFixed(1)}`:'· 아직 밥알 없음'}</div>
+        ${ag?grainbarHTML(ag):''}
+      </div>`;
+    });
+  }
+  root().innerHTML = html;
+}
+
+/* ══════════ 화면: 식당 상세 ══════════ */
+function openPlace(pid, keepScroll){
+  const p = S.places.find(x=>x.id===pid);
+  if(!p) return;
+  S.view = 'placeDetail';
+  S.currentPid = pid;
+  const rs = placeReviews(pid);
+  const ag = aggScores(pid);
+
+  let html = `<div class="pad" style="padding-bottom:4px">
+    <span style="font-size:13px;color:var(--soft);font-weight:700;cursor:pointer" onclick="go('places')">← 공기밥</span>
+  </div>
+  <div class="pad" style="padding-top:6px">
+    <div style="background:linear-gradient(160deg,var(--gochu),var(--gochu2));border-radius:20px;padding:20px;color:#fff;box-shadow:var(--sh2)">
+      <div style="font-family:'Jua';font-size:22px">${esc(p.name)}</div>
+      <div style="font-size:12px;opacity:.85;margin-top:3px">${esc(p.cat)} · ${esc(p.area||'')}</div>
+      <div style="font-family:'Jua';font-size:38px;margin-top:8px">${rs.length?avgAll(pid).toFixed(1):'–'}<span style="font-size:14px;opacity:.8"> / 5.0 공기밥</span></div>
+    </div>
+  </div>`;
+
+  if(ag){
+    html += `<div class="pad" style="padding-top:0"><div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px">`;
+    GR.forEach(g=>{
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px dashed var(--line)">
+        <span style="font-weight:700;font-size:13px">${g.n} <span style="font-size:10px;color:var(--soft);font-weight:500">${g.g}</span></span>
+        ${dotsHTML(g, ag[g.k])}</div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  html += `<div style="padding:0 18px 8px"><button class="btn-p" onclick="startWrite('${pid}')">🍙 이 집에 밥알 남기기</button></div>
+  <div style="padding:0 18px 12px" class="btn-row">
+    <button class="btn-s" style="background:#E8F3DA;color:#2b6b1e" onclick="naverSearch('${pid}')">🗺️ 네이버지도 보기</button>
+    <button class="btn-s" style="background:#E8F0FB;color:#2a5ab5" onclick="naverRoute('${pid}')">🚶 길찾기</button>
+  </div>`;
+  html += `<div class="sec-h" style="padding-top:4px"><div class="sec-t">밥알 ${rs.length}개</div></div>`;
+
+  if(!rs.length){
+    html += `<div class="empty">첫 밥알을 남기면 <b>+${SG_MEMO}가마</b>!</div>`;
+  } else {
+    rs.forEach(r=>{
+      html += `<div class="card" style="cursor:default">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-weight:700;font-size:13px">🍙 <b style="color:var(--gochu)">${esc(r.nick)}</b></span>
+          <span style="font-size:10.5px;color:var(--soft)">${fmt(r.ts)}</span>
+        </div>
+        ${(r.tags&&r.tags.length)?`<div style="margin-top:6px;font-size:10.5px;color:var(--soft)">${r.tags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}
+        ${grainbarHTML(r.scores, 6)}
+        ${r.memo?`<div class="memo-line">💬 ${esc(r.memo)}</div>`:''}
+        ${r.diary?`<div style="margin-top:9px;font-size:12.5px;line-height:1.7;color:#3d362c;background:var(--rice);border-radius:10px;padding:10px 12px"><span style="font-size:10px;font-weight:700;color:var(--gochu)">🍚 AI 밥일기</span><br>${esc(r.diary)}</div>`:''}
+      </div>`;
+    });
+  }
+  root().innerHTML = html;
+  setActiveTab('places');
+  if(!keepScroll) $('scroll').scrollTop = 0;
+}
+
+/* ══════════ 화면: 밥알 남기기 ══════════ */
+function startWrite(pid){
+  S.draft = { pid: pid||null, scores:{}, tags:[], memo:'' };
+  go('write');
+}
+function renderWrite(){
+  if(!S.draft) S.draft = { pid:null, scores:{}, tags:[], memo:'' };
+  const d = S.draft;
+
+  let html = `<div class="pad">
+    <div style="font-family:'Jua';font-size:20px;margin-bottom:4px">오늘 뭐 먹었어? 🍚</div>
+    <div style="font-size:12px;color:var(--soft);margin-bottom:16px;line-height:1.6">밥알 점수 + 2줄 메모만 남기면 끝.<br>AI 밥일기는 준비 중이에요.</div>
+
+    <div class="field"><label>어느 집?</label>
+      <select id="wPid" onchange="S.draft.pid=this.value">
+        <option value="">— 식당 선택 —</option>
+        ${S.places.map(p=>`<option value="${p.id}" ${d.pid===p.id?'selected':''}>${esc(p.name)} (${esc(p.cat)})</option>`).join('')}
+      </select>
+    </div>
+    <div style="margin:-6px 0 14px"><button class="btn-s" style="padding:11px;font-size:13px" onclick="promptNewPlace(true)">+ 목록에 없어요, 새로 등록</button></div>
+
+    <div class="field"><label>상황 태그 (여러 개 가능)</label>
+      <div class="chips" id="wTags">
+        ${TAGS.map(t=>`<span class="chip ${d.tags.includes(t)?'on':''}" onclick="toggleTag(this,'${t}')">${t}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="field"><label>밥알 평가 — 재료를 눌러 점수를 매겨줘</label>`;
+
+  GR.forEach(g=>{
+    const v = d.scores[g.k]||0;
+    html += `<div class="score-row">
+      <div class="score-top">
+        <span class="score-nm">${g.n}<small>${g.g}</small></span>
+        <span class="score-v" id="sv_${g.k}">${v||'–'}</span>
+      </div>
+      <div class="gpick" data-k="${g.k}">
+        ${[1,2,3,4,5].map(i=>`<span class="dg" data-v="${i}" onclick="pickGrain('${g.k}',${i})" style="background:${i<=v?g.bg:'transparent'};border-color:${g.c};opacity:${i<=v?1:.3}"></span>`).join('')}
+      </div>
+    </div>`;
+  });
+
+  html += `</div>
+    <div class="field"><label>밥메모 (1~2줄, 솔직하게)</label>
+      <textarea id="wMemo" placeholder="예) 혼자 점심 먹기 편했어요. 제육은 맛있는데 매장이 좀 좁아요." oninput="S.draft.memo=this.value">${esc(d.memo)}</textarea>
+    </div>
+    <div class="btn-row" style="margin-bottom:8px">
+      <button class="btn-s" onclick="submitReview()">바로 저장 (+${SG_MEMO}가마)</button>
+      <button class="btn-p" style="padding:14px;font-size:14px" onclick="aiDiaryComingSoon()">🍚 AI 밥일기 (준비중)</button>
+    </div>
+    <div style="text-align:center;font-size:10.5px;color:var(--soft);line-height:1.6">AI 밥일기 기능은 곧 찾아올게요.<br>지금은 점수와 메모만으로도 충분해요!</div>
+  </div>`;
+  root().innerHTML = html;
+}
+function toggleTag(el, t){
+  const i = S.draft.tags.indexOf(t);
+  if(i>=0){ S.draft.tags.splice(i,1); el.classList.remove('on'); }
+  else { S.draft.tags.push(t); el.classList.add('on'); }
+}
+function pickGrain(k, v){
+  S.draft.scores[k] = v;
+  const g = GR.find(x=>x.k===k);
+  $('sv_'+k).textContent = v;
+  document.querySelectorAll(`.gpick[data-k="${k}"] .dg`).forEach((el,i)=>{
+    const on = (i+1)<=v;
+    el.style.background = on ? g.bg : 'transparent';
+    el.style.opacity = on ? 1 : .3;
+  });
+}
+function aiDiaryComingSoon(){
+  toast('🍚 AI 밥일기 기능은 준비 중이에요!');
+}
+async function promptNewPlace(fromWrite){
+  const name = prompt('식당 이름을 알려줘 🍚');
+  if(!name || !name.trim()) return;
+  let cat = prompt(`카테고리는? (${CATS.join(' / ')})`, '한식') || '기타';
+  if(!CATS.includes(cat)) cat = '기타';
+  const area = prompt('동네는? (예: 성수, 을지로)', '') || '';
+  const data = { name:name.trim().slice(0,30), cat, area:area.trim().slice(0,15), addedBy:S.nick, ts:Date.now() };
+  try{
+    const ref = await db.collection('places').add(data);
+    const p = { id:ref.id, ...data };
+    if(!S.places.find(x=>x.id===p.id)) S.places.unshift(p);
+    toast(`${p.name} 등록 완료! 🍱`);
+    if(fromWrite){ S.draft.pid = p.id; renderWrite(); }
+    else renderPlaces();
+  }catch(e){
+    console.error(e);
+    toast('저장 실패, 다시 시도해줘');
+  }
+}
+
+/* ══════════ 리뷰 제출 ══════════ */
+async function submitReview(){
+  const d = S.draft;
+  if(!d.pid){ toast('식당을 선택해줘! 🍱'); return; }
+  const total = GR.reduce((s,g)=>s+(d.scores[g.k]||0),0);
+  if(total===0){ toast('밥알을 하나라도 매겨줘! 🍚'); return; }
+  d.memo = ($('wMemo')?$('wMemo').value:d.memo||'').trim();
+
+  const rev = { pid:d.pid, nick:S.nick, scores:{...d.scores}, tags:[...d.tags], memo:d.memo, ts:Date.now() };
+
+  try{
+    const ref = await db.collection('reviews').add(rev);
+    rev.id = ref.id;
+  }catch(e){
+    console.error(e);
+    toast('저장 실패 — 네트워크 확인 후 다시 시도해줘');
+    return;
+  }
+
+  if(!S.reviews.find(x=>x.id===rev.id)) S.reviews.unshift(rev);
+  S.sg += SG_MEMO;
+  localStorage.setItem('bab2:sg', String(S.sg));
+  updateTop();
+  S.draft = null;
+  toast(`밥알 남겼다! <b style="color:#E8C36A">+${SG_MEMO}가마</b> 🌾`);
+  openPlace(rev.pid);
+}
+
+/* ══════════ 화면: 내 밥역사 ══════════ */
+function renderMy(){
+  const mine = myReviews();
+  let html = `<div class="sec-h"><div class="sec-t">📖 ${esc(S.nick)}의 밥역사</div><div class="sec-sub">${mine.length}개</div></div>`;
+  if(!mine.length){
+    html += `<div class="empty"><div class="big">📖</div>아직 밥역사가 없어요.<br><b>첫 밥알</b>을 남겨보세요!</div>
+      <div style="padding:0 18px"><button class="btn-p" onclick="go('write')">✍️ 밥알 남기기</button></div>`;
+  } else {
+    // 간단 통계
+    const avg = mine.map(r=>{ const v=GR.map(g=>r.scores[g.k]||0).filter(x=>x>0); return v.length?v.reduce((s,x)=>s+x,0)/v.length:0; });
+    const best = mine.reduce((a,b)=>{
+      const av = x=>{ const v=GR.map(g=>x.scores[g.k]||0).filter(y=>y>0); return v.length?v.reduce((s,y)=>s+y,0)/v.length:0; };
+      return av(a)>=av(b)?a:b;
+    });
+    const bestP = S.places.find(x=>x.id===best.pid);
+    html += `<div class="pad" style="padding-top:0"><div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:12.5px;line-height:1.9">
+      🍚 총 밥알 <b>${mine.length}개</b> · 평균 만족도 <b>${(avg.reduce((s,v)=>s+v,0)/avg.length).toFixed(1)}</b><br>
+      🏆 최고의 한 끼: <b style="color:var(--gochu)">${bestP?esc(bestP.name):'?'}</b><br>
+      🌾 모은 쌀가마 <b>${S.sg}가마</b></div></div>`;
+
+    mine.forEach(r=>{
+      const p = S.places.find(x=>x.id===r.pid);
+      html += `<div class="card" onclick="openPlace('${r.pid}')">
+        <div style="display:flex;justify-content:space-between;align-items:baseline">
+          <span class="rname">${p?esc(p.name):'삭제된 식당'}</span>
+          <span style="font-size:10.5px;color:var(--soft)">${fmt(r.ts)}</span>
+        </div>
+        ${(r.tags&&r.tags.length)?`<div style="margin-top:4px;font-size:10.5px;color:var(--soft)">${r.tags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}
+        ${grainbarHTML(r.scores)}
+        ${r.memo?`<div class="memo-line">💬 ${esc(r.memo)}</div>`:''}
+      </div>`;
+    });
+  }
+  root().innerHTML = html;
+}
+
+/* ══════════ 화면: 쌀가마 ══════════ */
+function renderWallet(){
+  // 밥알이 랭킹
+  const byNick = {};
+  S.reviews.forEach(r=>{ byNick[r.nick]=(byNick[r.nick]||0)+1; });
+  const rank = Object.entries(byNick).sort((a,b)=>b[1]-a[1]).slice(0,10);
+
+  let html = `<div style="height:16px"></div>
+  <div class="wallet">
+    <div class="cap">내 쌀가마</div>
+    <div class="amt">${S.sg.toLocaleString()}</div>
+    <div class="sub">밥알 ${myReviews().length}개 남김 · 취향 기록자</div>
+  </div>
+  <div class="pad" style="padding-top:0">
+    <div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:12px;line-height:1.8;color:#473f33">
+      <b style="color:var(--gochu)">어차피 먹는 밥, 기록하면 리워드가 된다.</b><br>
+      밥메모 리뷰 +${SG_MEMO}가마 · AI 밥일기 리워드는 기능 출시 후 추가될 예정이에요.<br>
+      쌀가마는 외식 혜택으로만 교환됩니다. (제휴 준비 중)
+    </div>
+  </div>
+  <div class="sec-h"><div class="sec-t">🏆 밥알이 랭킹</div><div class="sec-sub">기록 수 기준</div></div>
+  <div class="pad" style="padding-top:0"><div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:6px 16px">`;
+  if(!rank.length){
+    html += `<div class="empty" style="padding:20px">아직 밥알이가 없어요</div>`;
+  } else {
+    rank.forEach(([nick,cnt],i)=>{
+      html += `<div class="rank-item">
+        <span class="rank-no">${i+1}</span>
+        <div class="rank-info">
+          <div class="rank-nick">${esc(nick)}${nick===S.nick?' <span style="color:var(--gochu);font-size:10px">(나)</span>':''}</div>
+          <div class="rank-meta">밥알 ${cnt}개</div>
+        </div>
+      </div>`;
+    });
+  }
+  html += `</div></div>
+  <div class="pad" style="padding-top:0"><div style="background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;font-size:11.5px;line-height:1.8;color:#473f33">
+    <b>💾 데이터는 어디에 저장되나요?</b><br>
+    식당·리뷰는 <b>Firebase 공유 DB</b>에 실시간으로 쌓여 이 앱을 여는 모두에게 즉시 보여요.
+    닉네임·쌀가마는 이 브라우저의 개인 저장소(localStorage)에만 보관돼요.
+  </div></div>
+  <div class="pad"><div style="text-align:center;font-size:11px;color:var(--soft);line-height:1.7">
+    이 링크를 친구에게 공유하면<br>친구도 들어와 함께 밥알을 쌓을 수 있어요 🍚
+  </div></div>`;
+  root().innerHTML = html;
+}
+
+/* ══════════ 네이버지도 연동 (URL) ══════════ */
+function naverQuery(pid){
+  const p = S.places.find(x=>x.id===pid);
+  if(!p) return null;
+  return encodeURIComponent((p.area?p.area+' ':'')+p.name);
+}
+function naverSearch(pid){
+  const q = naverQuery(pid);
+  if(!q) return;
+  window.open('https://map.naver.com/p/search/'+q, '_blank');
+}
+function naverRoute(pid){
+  const q = naverQuery(pid);
+  if(!q) return;
+  // 도착지 검색 → 사용자가 길찾기 탭. 모바일에선 네이버지도 앱으로 연결됨
+  window.open('https://map.naver.com/p/search/'+q, '_blank');
+  toast('네이버지도에서 길찾기를 눌러줘 🗺️');
+}
+
+/* ══════════ 라우팅 ══════════ */
+function setActiveTab(v){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.v===v));
+}
+function go(v){
+  S.view = v;
+  setActiveTab(v);
+  if(v==='home') renderHome();
+  else if(v==='places') renderPlaces();
+  else if(v==='write') renderWrite();
+  else if(v==='my') renderMy();
+  else if(v==='wallet') renderWallet();
+  $('scroll').scrollTop = 0;
+}
+
+/* ══════════ 닉네임 (개인 localStorage) ══════════ */
+$('userBtn').onclick = ()=>{
+  const n = prompt('밥알이야 닉네임 🍙 (리뷰에 표시돼요)', S.nick||'');
+  if(n && n.trim()){
+    S.nick = n.trim().slice(0,12);
+    localStorage.setItem('bab2:nick', S.nick);
+    updateTop();
+    if(S.view==='placeDetail' && S.currentPid) openPlace(S.currentPid);
+    else go(S.view);
+  }
+};
+
+/* ══════════ 부팅 (닉네임/쌀가마는 개인 localStorage) ══════════ */
+(function init(){
+  S.nick = localStorage.getItem('bab2:nick');
+  S.sg = parseInt(localStorage.getItem('bab2:sg')||'0', 10) || 0;
+
+  if(!S.nick){
+    let n2 = null;
+    while(!n2 || !n2.trim()){
+      n2 = prompt('밥알이야에 온 걸 환영해! 🍚\n닉네임을 정해줘 (친구들에게 보여요)','');
+      if(n2===null){ n2='손님'+Math.floor(Math.random()*1000); break; }
+    }
+    S.nick = n2.trim().slice(0,12);
+    localStorage.setItem('bab2:nick', S.nick);
+  }
+  updateTop();
+  // 목록 렌더는 Firestore 최초 스냅샷(placesLoaded && reviewsLoaded) 도착 시 checkBoot()에서 실행됨
+})();
+</script>
+</body>
+</html>
