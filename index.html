@@ -343,43 +343,157 @@ function dotsHTML(g, val){
   }
   return h+`</span>`;
 }
-// 재료별 점수/만점 비율만큼 알갱이를 섞어 담은 미니 공기밥 SVG. 계란후라이는 scores.egg===1 일 때만 표시.
+/* ── 색상 유틸 ── */
+function hexToRgb(h){ h=(h||'').replace('#',''); if(h.length===3) h=h.split('').map(c=>c+c).join(''); const n=parseInt(h,16)||0; return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}; }
+function rgbStr(c){ return `rgb(${Math.round(c.r)},${Math.round(c.g)},${Math.round(c.b)})`; }
+function lighten(c,a){ return {r:c.r+(255-c.r)*a, g:c.g+(255-c.g)*a, b:c.b+(255-c.b)*a}; }
+function darken(c,a){ return {r:c.r*(1-a), g:c.g*(1-a), b:c.b*(1-a)}; }
+function desat(c,a){ const y=(c.r*0.3+c.g*0.59+c.b*0.11); return {r:c.r+(y-c.r)*a, g:c.g+(y-c.g)*a, b:c.b+(y-c.b)*a}; }
+/* ── 시드 RNG (같은 점수면 항상 같은 낟알 배치 → 리렌더 깜빡임 방지) ── */
+function hashSeed(scores, cat){
+  const str = (cat||'')+'|'+Object.keys(scores||{}).sort().map(k=>k+':'+scores[k]).join(',');
+  let h = 2166136261>>>0;
+  for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h,16777619); }
+  return h>>>0;
+}
+function mulberry32(a){ return function(){ a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15, 1|a); t=t+Math.imul(t^t>>>7, 61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+
+let _bowlUID = 0;
+/*
+ * 봉긋하게 수북이 쌓인 공기밥 SVG.
+ * 1) 매끈한 돔(밥 덩어리) 실루엣을 베지어 path로 먼저 그리고
+ * 2) 재료 비율로 블렌딩한 색 + radialGradient 명암으로 입체 채움 (clipPath로 돔 안에만)
+ * 3) 돔 윗면에만 얕은 낟알 질감을 장식으로 얹음 (큰 사이즈에서만)
+ * 흑미(단점) 비율이 높으면 베이스 톤 전체가 어둡고 탁해짐. 계란후라이는 egg===1일 때만 정상부에.
+ * size>=70 이면 낟알 디테일 포함(상세용), 작으면 돔+그라데이션만(홈 카드용).
+ */
 function riceBowlSVG(scores, cat, size){
   size = size || 46;
   scores = scores || {};
+  const detail = size >= 70;
   const axes = catAxes(cat);
-  const weights = axes.map(g=>({ g, w: Math.max(0, Math.min(1, (scores[g.k]||0)/g.max)) }));
-  const total = weights.reduce((s,x)=>s+x.w, 0);
-  const N = 26;
-  let grains = [];
+  const uid = 'rb'+(++_bowlUID);
+
+  // 재료 비율
+  const items = axes.map(g=>({ g, w: Math.max(0, Math.min(1, (scores[g.k]||0)/g.max)) }));
+  const total = items.reduce((s,x)=>s+x.w, 0);
+  const fracs = items.map(x=> total>0 ? x.w/total : 0);
+  // 단점(흑미)은 비율이 아니라 그 축 원점수(0~1)로 강도 결정 → 단점 많으면 확실히 시커멓게
+  let conW = 0;
+  items.forEach(x=>{ if(x.g.qualityInverse) conW = Math.max(conW, x.w); });
+
+  // 베이스 색: 흰쌀(백미)을 캔버스로 두고, 다른 재료들이 비율만큼 살짝 물들임.
+  // (8축을 균등 블렌드하면 흰밥이 탁해지므로 백미=맛 축을 바탕색으로 우선)
+  let base = hexToRgb('#FBF6EC');
   if(total>0){
-    const exact = weights.map(x=>x.w/total*N);
-    let counts = exact.map(Math.floor);
-    let used = counts.reduce((s,c)=>s+c,0);
-    const order = exact.map((e,i)=>({i, r:e-counts[i]})).sort((a,b)=>b.r-a.r);
-    let k=0;
-    while(used<N && k<order.length){ counts[order[k].i]++; used++; k++; }
-    weights.forEach((x,i)=>{ for(let j=0;j<counts[i];j++) grains.push(x.g); });
-    for(let i=grains.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); const t=grains[i]; grains[i]=grains[j]; grains[j]=t; }
+    let tr=0,tg=0,tb=0,tw=0;
+    items.forEach((x,i)=>{
+      if(x.g.k==='taste' || x.g.qualityInverse) return; // 백미 자체·흑미(단점)는 제외
+      const c=hexToRgb(x.g.bg); tr+=c.r*fracs[i]; tg+=c.g*fracs[i]; tb+=c.b*fracs[i]; tw+=fracs[i];
+    });
+    if(tw>0){
+      const tint = {r:tr/tw, g:tg/tw, b:tb/tw};
+      const strength = Math.min(0.5, tw*0.7); // 다른 재료 비중만큼만 물들임
+      base = {r:base.r+(tint.r-base.r)*strength, g:base.g+(tint.g-base.g)*strength, b:base.b+(tint.b-base.b)*strength};
+    }
   }
-  const R = size/2 - 5;
-  const cx = size/2, cy = size/2 + 2;
-  const dots = grains.map(g=>{
-    const ang = Math.random()*Math.PI*2;
-    const rad = Math.sqrt(Math.random())*R;
-    const x = cx + Math.cos(ang)*rad;
-    const y = cy + Math.sin(ang)*rad*0.62;
-    const rot = Math.floor(Math.random()*360);
-    return `<ellipse cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" rx="3.2" ry="1.9" transform="rotate(${rot} ${x.toFixed(1)} ${y.toFixed(1)})" fill="${g.bg}" stroke="${g.c}" stroke-width="0.5" opacity="0.96"/>`;
-  }).join('');
-  const eggIcon = scores.egg===1 ? `<g transform="translate(${(size/2-7.5).toFixed(1)},${(size*0.08).toFixed(1)})">
-    <ellipse cx="7.5" cy="6" rx="7.5" ry="5.4" fill="#fff" stroke="#E8DECE" stroke-width="0.6"/>
-    <ellipse cx="7.5" cy="6.2" rx="2.8" ry="2.4" fill="#F5B400"/>
-  </g>` : '';
+  // 흑미(단점) 많으면 톤 전체를 탁하고 어둡게 (표면 몇 알이 아니라 색감 자체가 침침)
+  base = darken(desat(base, conW*0.55), conW*0.5);
+
+  const topCol = lighten(base, 0.62);   // 정상부 하이라이트
+  const midCol = base;
+  const botCol = darken(base, 0.30);     // 옆면·아랫부분 그림자
+
+  // 기하 (돔이 그릇 테두리 위로 봉긋)
+  const cx = size/2;
+  const rimY = size*0.58;
+  const peakY = size*0.23;
+  const rimRx = size*0.40;               // 밥 돔 반너비
+  const bulge = size*0.11;               // 밥이 그릇 앞테두리로 볼록 내려온 정도
+  const bowlRx = size*0.45;
+  const bowlRy = size*0.115;
+  const bowlBottomY = size*0.84;
+  const leftX = cx - rimRx, rightX = cx + rimRx;
+  const round = n => n.toFixed(1);
+  const domeTopY = x => peakY + (rimY - peakY)*Math.pow((x-cx)/rimRx, 2); // 낟알 배치용 근사 곡선
+
+  // 밥 돔 실루엣 (정상부 살짝 완만, 뾰족하지 않게)
+  const ricePath =
+    `M ${round(leftX)} ${round(rimY)} `+
+    `C ${round(leftX+rimRx*0.16)} ${round(rimY-(rimY-peakY)*0.80)} ${round(cx-rimRx*0.55)} ${round(peakY+size*0.03)} ${round(cx)} ${round(peakY)} `+
+    `C ${round(cx+rimRx*0.55)} ${round(peakY+size*0.03)} ${round(rightX-rimRx*0.16)} ${round(rimY-(rimY-peakY)*0.80)} ${round(rightX)} ${round(rimY)} `+
+    `Q ${round(cx)} ${round(rimY+bulge)} ${round(leftX)} ${round(rimY)} Z`;
+
+  // 그릇 컵 실루엣
+  const bowlPath =
+    `M ${round(cx-bowlRx)} ${round(rimY)} `+
+    `C ${round(cx-bowlRx)} ${round(rimY+size*0.20)} ${round(cx-bowlRx*0.5)} ${round(bowlBottomY)} ${round(cx)} ${round(bowlBottomY)} `+
+    `C ${round(cx+bowlRx*0.5)} ${round(bowlBottomY)} ${round(cx+bowlRx)} ${round(rimY+size*0.20)} ${round(cx+bowlRx)} ${round(rimY)} `+
+    `A ${round(bowlRx)} ${round(bowlRy)} 0 0 1 ${round(cx-bowlRx)} ${round(rimY)} Z`;
+
+  // 돔 윗면 낟알 질감 (장식) + 정상부 반짝임
+  let grainsSVG = '';
+  if(detail && total>0){
+    const rng = mulberry32(hashSeed(scores,cat));
+    const pool = [];
+    items.forEach((x,i)=>{ let cnt=Math.round(fracs[i]*100); if(x.g.k==='taste') cnt=Math.round(cnt*2.2); for(let j=0;j<cnt;j++) pool.push(x.g); });
+    const N = 36;
+    for(let k=0;k<N;k++){
+      const t = rng()*1.7-0.85;
+      const gx = cx + t*rimRx;
+      const top = domeTopY(gx);
+      const gy = top + Math.pow(rng(),1.5)*(rimY-top)*0.85 + size*0.015;
+      const gcol = pool.length? pool[Math.floor(rng()*pool.length)] : items[0].g;
+      // 흰쌀 계열은 밝게(하이라이트), 색 재료는 고유색을 살려 섞인 느낌
+      const isWhite = gcol.k==='taste';
+      const gfill = isWhite ? rgbStr(lighten(hexToRgb(gcol.bg),0.2)) : rgbStr(lighten(hexToRgb(gcol.bg),0.08));
+      const gop = isWhite ? 0.5 : 0.62;
+      const rot = Math.floor(rng()*360);
+      grainsSVG += `<ellipse cx="${round(gx)}" cy="${round(gy)}" rx="${(size*0.046).toFixed(2)}" ry="${(size*0.022).toFixed(2)}" transform="rotate(${rot} ${round(gx)} ${round(gy)})" fill="${gfill}" opacity="${gop}"/>`;
+    }
+    for(let k=0;k<5;k++){
+      const gx = cx + (rng()-0.5)*rimRx;
+      const gy = domeTopY(gx) + rng()*size*0.09 + size*0.03;
+      grainsSVG += `<circle cx="${round(gx)}" cy="${round(gy)}" r="${(size*0.013).toFixed(2)}" fill="#ffffff" opacity="0.45"/>`;
+    }
+  }
+
+  // 계란후라이 (돔 곡률에 맞춰 살짝 눌러 얹기)
+  let eggSVG = '';
+  if(scores.egg===1){
+    const ex = cx, ey = peakY + size*0.03;
+    const wR = size*0.15, wRy = size*0.098;
+    eggSVG = `<g>
+      <ellipse cx="${round(ex-size*0.025)}" cy="${round(ey)}" rx="${round(wR)}" ry="${round(wRy)}" fill="#FFFDF7" stroke="#EFE4CC" stroke-width="${(size*0.008).toFixed(2)}"/>
+      <ellipse cx="${round(ex+size*0.035)}" cy="${round(ey-size*0.006)}" rx="${round(wR*0.66)}" ry="${round(wRy*0.82)}" fill="#FFFDF7"/>
+      <ellipse cx="${round(ex+size*0.006)}" cy="${round(ey)}" rx="${(size*0.056).toFixed(1)}" ry="${(size*0.048).toFixed(1)}" fill="url(#${uid}yolk)"/>
+    </g>`;
+  }
+
   return `<svg class="bowl" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
-    <ellipse cx="${cx}" cy="${(cy+2).toFixed(1)}" rx="${(R+3).toFixed(1)}" ry="${((R+3)*0.72).toFixed(1)}" fill="#F2E8D5" stroke="#D9C9A8" stroke-width="1.3"/>
-    ${dots || `<circle cx="${cx}" cy="${cy}" r="2" fill="#D9C9A8"/>`}
-    ${eggIcon}
+    <defs>
+      <radialGradient id="${uid}dome" cx="50%" cy="24%" r="74%">
+        <stop offset="0%" stop-color="${rgbStr(topCol)}"/>
+        <stop offset="46%" stop-color="${rgbStr(midCol)}"/>
+        <stop offset="100%" stop-color="${rgbStr(botCol)}"/>
+      </radialGradient>
+      <linearGradient id="${uid}bowl" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#FDFBF6"/>
+        <stop offset="100%" stop-color="#E4D5BB"/>
+      </linearGradient>
+      <radialGradient id="${uid}yolk" cx="38%" cy="34%" r="66%">
+        <stop offset="0%" stop-color="#FFDC7A"/>
+        <stop offset="58%" stop-color="#F5B400"/>
+        <stop offset="100%" stop-color="#DE9700"/>
+      </radialGradient>
+      <clipPath id="${uid}clip"><path d="${ricePath}"/></clipPath>
+    </defs>
+    <path d="${bowlPath}" fill="url(#${uid}bowl)" stroke="#D6C39E" stroke-width="${(size*0.018).toFixed(2)}"/>
+    <ellipse cx="${round(cx)}" cy="${round(rimY)}" rx="${round(bowlRx)}" ry="${round(bowlRy)}" fill="#E6D7BD"/>
+    <path d="${ricePath}" fill="url(#${uid}dome)"/>
+    <path d="M ${round(leftX)} ${round(rimY)} Q ${round(cx)} ${round(rimY+bulge)} ${round(rightX)} ${round(rimY)}" fill="none" stroke="rgba(85,58,24,0.16)" stroke-width="${(size*0.022).toFixed(2)}"/>
+    <g clip-path="url(#${uid}clip)">${grainsSVG}${conW>0.05?`<path d="${ricePath}" fill="rgba(18,13,9,${(conW*0.45).toFixed(2)})"/>`:''}</g>
+    ${eggSVG}
   </svg>`;
 }
 function recordCardBody(rec, place){
