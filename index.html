@@ -154,6 +154,30 @@ body{background:#E8DFD0;font-family:'Noto Sans KR',sans-serif;color:var(--soot)}
   border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px;margin-right:6px}
 @keyframes sp{to{transform:rotate(360deg)}}
 .loading-note{text-align:center;font-size:12px;color:var(--soft);padding:20px}
+
+/* 사진 업로드 미리보기 */
+.photo-previews{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:9px}
+.photo-previews:empty{display:none}
+.photo-thumb{position:relative;width:70px;height:70px;border-radius:11px;overflow:hidden;border:1px solid var(--line);flex-shrink:0}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.photo-x{position:absolute;top:2px;right:2px;width:19px;height:19px;border:none;border-radius:50%;
+  background:rgba(30,20,10,.72);color:#fff;font-size:11px;line-height:19px;text-align:center;cursor:pointer;padding:0}
+.photo-add-btn .cam{margin-right:4px}
+
+/* 기록 카드 안 사진 썸네일 */
+.rec-photos{display:flex;gap:6px;margin-top:9px}
+.rec-photo{width:56px;height:56px;border-radius:10px;object-fit:cover;cursor:pointer;border:1px solid var(--line);flex-shrink:0}
+
+/* 밥바구니 카드 상단 사진 */
+.wish-photo{width:100%;height:130px;object-fit:cover;border-radius:12px;margin-bottom:10px;cursor:pointer;display:block}
+
+/* 사진 전체화면 모달 */
+.photo-modal{position:fixed;inset:0;background:rgba(15,10,6,.92);z-index:200;display:none;
+  align-items:center;justify-content:center;padding:24px}
+.photo-modal.show{display:flex}
+.photo-modal img{max-width:100%;max-height:100%;border-radius:8px;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+.photo-modal-x{position:absolute;top:calc(14px + env(safe-area-inset-top));right:16px;width:40px;height:40px;border:none;
+  border-radius:50%;background:rgba(255,255,255,.15);color:#fff;font-size:20px;cursor:pointer;z-index:2}
 </style>
 </head>
 <body>
@@ -182,6 +206,7 @@ body{background:#E8DFD0;font-family:'Noto Sans KR',sans-serif;color:var(--soot)}
 <!-- Firebase (compat SDK: 일반 <script> 전역 스코프와 그대로 호환) -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-storage-compat.js"></script>
 
 <script>
 /* ══════════ 카테고리별 밥알 축 ══════════ */
@@ -248,6 +273,9 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const storage = firebase.storage();
+// 사진 업로드 실패 시 무한 대기 방지 (버킷 미설정·네트워크 문제 등)
+try{ storage.setMaxUploadRetryTime(20000); storage.setMaxOperationRetryTime(20000); }catch(e){}
 
 // places / foodRecords / wishlist 는 모든 사용자가 공유하는 컬렉션 — 실시간 리스너로 동기화
 let placesLoaded = false, foodRecordsLoaded = false, wishlistLoaded = false;
@@ -508,6 +536,7 @@ function recordCardBody(rec, place){
       <div style="font-size:10.5px;color:var(--soft);margin-top:2px">🍙 <b style="color:var(--gochu)">${esc(rec.nick)}</b></div>
       ${(rec.tags&&rec.tags.length)?`<div style="margin-top:5px;font-size:10.5px;color:var(--soft)">${rec.tags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}
       ${rec.memo?`<div class="memo-line">💬 ${esc(rec.memo)}</div>`:''}
+      ${(rec.photos&&rec.photos.length)?`<div class="rec-photos">${rec.photos.slice(0,3).map(u=>`<img class="rec-photo" src="${esc(u)}" alt="음식 사진" onclick="event.stopPropagation();openPhoto(decodeURIComponent('${encodeURIComponent(u)}'))">`).join('')}</div>`:''}
     </div>
   </div>`;
 }
@@ -675,11 +704,12 @@ function openPlace(pid, keepScroll){
 
 /* ══════════ 화면: 밥알 남기기 ══════════ */
 function startWrite(pid){
-  S.draft = { pid: pid||null, menu:'', scores:{}, tags:[], memo:'', egg:0 };
+  S.draft = { pid: pid||null, menu:'', scores:{}, tags:[], memo:'', egg:0, photos:[] };
   go('write');
 }
 function renderWrite(){
-  if(!S.draft) S.draft = { pid:null, menu:'', scores:{}, tags:[], memo:'', egg:0 };
+  if(!S.draft) S.draft = { pid:null, menu:'', scores:{}, tags:[], memo:'', egg:0, photos:[] };
+  if(!S.draft.photos) S.draft.photos = [];
   const d = S.draft;
   const p = d.pid ? S.places.find(x=>x.id===d.pid) : null;
   const axes = p ? catAxes(p.cat) : [];
@@ -737,6 +767,11 @@ function renderWrite(){
   html += `<div class="field"><label>밥메모 (1~2줄, 솔직하게)</label>
       <textarea id="wMemo" placeholder="예) 혼자 점심 먹기 편했어요. 제육은 맛있는데 매장이 좀 좁아요." oninput="S.draft.memo=this.value">${esc(d.memo)}</textarea>
     </div>
+    <div class="field"><label>📷 사진 (선택, 최대 3장)</label>
+      <div id="photoPreviews" class="photo-previews"></div>
+      <input id="photoInput" type="file" accept="image/*" multiple style="display:none" onchange="onPhotoPick(event)">
+      <button type="button" class="btn-s photo-add-btn" style="padding:12px;font-size:13px" onclick="document.getElementById('photoInput').click()"><span class="cam">📷</span> 사진 추가</button>
+    </div>
     <div class="btn-row" style="margin-bottom:8px">
       <button class="btn-s" onclick="submitFoodRecord()">바로 저장 (+${SG_MEMO}가마)</button>
       <button class="btn-p" style="padding:14px;font-size:14px" onclick="aiDiaryComingSoon()">🍚 AI 밥일기 (준비중)</button>
@@ -744,6 +779,7 @@ function renderWrite(){
     <div style="text-align:center;font-size:10.5px;color:var(--soft);line-height:1.6">AI 밥일기 기능은 곧 찾아올게요.<br>지금은 점수와 메모만으로도 충분해요!</div>
   </div>`;
   root().innerHTML = html;
+  renderPhotoPreviews();
 }
 function changeDraftPlace(pid){
   S.draft.pid = pid;
@@ -779,6 +815,80 @@ function toggleEgg(){
 function aiDiaryComingSoon(){
   toast('🍚 AI 밥일기 기능은 준비 중이에요!');
 }
+
+/* ══════════ 사진 유틸 (리사이즈·업로드·전체화면 모달) ══════════ */
+// 업로드 전 캔버스로 가로 maxW(1200px) 이하로 리사이즈+JPEG 압축 → 용량 절감
+function resizeImage(file, maxW){
+  maxW = maxW || 1200;
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = ()=>{
+      URL.revokeObjectURL(url);
+      let w = img.width, h = img.height;
+      if(w > maxW){ h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob 실패')), 'image/jpeg', 0.82);
+    };
+    img.onerror = ()=>{ URL.revokeObjectURL(url); reject(new Error('이미지 로드 실패')); };
+    img.src = url;
+  });
+}
+// Firebase Storage 업로드 → 다운로드 URL 반환
+async function uploadBlob(path, blob){
+  const ref = storage.ref(path);
+  await ref.put(blob, { contentType:'image/jpeg' });
+  return await ref.getDownloadURL();
+}
+// 밥알 남기기: 사진 선택 (최대 3장, 각 리사이즈 후 미리보기)
+async function onPhotoPick(ev){
+  const files = Array.from(ev.target.files || []);
+  ev.target.value = '';
+  if(!S.draft) return;
+  if(!S.draft.photos) S.draft.photos = [];
+  for(const f of files){
+    if(S.draft.photos.length >= 3){ toast('사진은 최대 3장까지예요 📷'); break; }
+    if(!f.type || !f.type.startsWith('image/')) continue;
+    try{
+      const blob = await resizeImage(f, 1200);
+      S.draft.photos.push({ blob, preview: URL.createObjectURL(blob) });
+    }catch(e){ console.error(e); toast('사진을 불러오지 못했어요'); }
+  }
+  renderPhotoPreviews();
+}
+function renderPhotoPreviews(){
+  const box = $('photoPreviews');
+  if(!box) return;
+  const photos = (S.draft && S.draft.photos) || [];
+  box.innerHTML = photos.map((ph,i)=>
+    `<div class="photo-thumb"><img src="${ph.preview}" alt="사진"><button type="button" class="photo-x" onclick="removeDraftPhoto(${i})">✕</button></div>`
+  ).join('');
+  const addBtn = document.querySelector('.photo-add-btn');
+  if(addBtn) addBtn.style.display = photos.length >= 3 ? 'none' : '';
+}
+function removeDraftPhoto(i){
+  const photos = (S.draft && S.draft.photos) || [];
+  const ph = photos[i];
+  if(ph && ph.preview) URL.revokeObjectURL(ph.preview);
+  photos.splice(i, 1);
+  renderPhotoPreviews();
+}
+// 전체화면 사진 모달
+function openPhoto(url){
+  let ov = $('photoModal');
+  if(!ov){
+    ov = document.createElement('div');
+    ov.id = 'photoModal';
+    ov.className = 'photo-modal';
+    ov.onclick = closePhoto;
+    document.body.appendChild(ov);
+  }
+  ov.innerHTML = `<button class="photo-modal-x" onclick="closePhoto()">✕</button><img src="${esc(url)}" onclick="event.stopPropagation()">`;
+  ov.classList.add('show');
+}
+function closePhoto(){ const ov = $('photoModal'); if(ov) ov.classList.remove('show'); }
 async function promptNewPlace(fromWrite, prefill){
   const name = prompt('장소 이름을 알려줘 🍚', (prefill&&prefill.name)||'');
   if(!name || !name.trim()) return;
@@ -812,25 +922,52 @@ async function submitFoodRecord(){
   if(total===0){ toast('밥알을 하나라도 매겨줘! 🍚'); return; }
   d.memo = ($('wMemo')?$('wMemo').value:d.memo||'').trim();
 
+  if(S.submitting) return;
+  S.submitting = true;
+
   const scores = {...d.scores};
   scores.egg = d.egg ? 1 : 0;
-  const rec = { pid:d.pid, menu:d.menu.slice(0,30), nick:S.nick, scores, tags:[...d.tags], memo:d.memo, ts:Date.now() };
+  const photos = (d.photos || []).slice(0, 3);
 
+  // 1) 사진 먼저 업로드 (실패해도 텍스트 기록은 저장 — 사진은 부가 기능)
+  //    문서를 photos 포함해 한 번의 create로 저장 → foodRecords update 규칙이 없어도 동작
+  let photoUrls = [];
+  if(photos.length){
+    toast('<span class="spin"></span>사진 업로드 중...');
+    try{
+      for(let i=0;i<photos.length;i++){
+        const url = await uploadBlob(`food-photos/${d.pid}/${Date.now()}_${i}_${Math.random().toString(36).slice(2,7)}.jpg`, photos[i].blob);
+        photoUrls.push(url);
+      }
+    }catch(e){
+      console.error(e);
+      photoUrls = [];
+      toast('사진 업로드는 실패했지만 기록은 저장할게요 🍚');
+    }
+  }
+
+  // 2) 기록 저장 (photos 포함, create 한 번)
+  const rec = { pid:d.pid, menu:d.menu.slice(0,30), nick:S.nick, scores, tags:[...d.tags], memo:d.memo, photos:photoUrls, ts:Date.now() };
   try{
     const ref = await db.collection('foodRecords').add(rec);
     rec.id = ref.id;
   }catch(e){
     console.error(e);
+    S.submitting = false;
     toast('저장 실패 — 네트워크 확인 후 다시 시도해줘');
     return;
   }
+  // 미리보기 objectURL 정리
+  photos.forEach(ph=>{ if(ph.preview) URL.revokeObjectURL(ph.preview); });
 
   if(!S.foodRecords.find(x=>x.id===rec.id)) S.foodRecords.unshift(rec);
   S.sg += SG_MEMO;
   localStorage.setItem('bab2:sg', String(S.sg));
   updateTop();
   S.draft = null;
-  toast(`밥알 남겼다! <b style="color:#E8C36A">+${SG_MEMO}가마</b> 🌾`);
+  S.submitting = false;
+  if(!photoUrls.length) toast(`밥알 남겼다! <b style="color:#E8C36A">+${SG_MEMO}가마</b> 🌾`);
+  else toast(`밥알 남겼다! 사진까지 📷 <b style="color:#E8C36A">+${SG_MEMO}가마</b> 🌾`);
   openPlace(rec.pid);
 }
 
@@ -864,6 +1001,7 @@ function renderMy(){
             </div>
             ${(r.tags&&r.tags.length)?`<div style="margin-top:4px;font-size:10.5px;color:var(--soft)">${r.tags.map(t=>'#'+esc(t)).join(' ')}</div>`:''}
             ${r.memo?`<div class="memo-line">💬 ${esc(r.memo)}</div>`:''}
+            ${(r.photos&&r.photos.length)?`<div class="rec-photos">${r.photos.slice(0,3).map(u=>`<img class="rec-photo" src="${esc(u)}" alt="음식 사진" onclick="event.stopPropagation();openPhoto(decodeURIComponent('${encodeURIComponent(u)}'))">`).join('')}</div>`:''}
           </div>
         </div>
       </div>`;
@@ -924,6 +1062,7 @@ function renderWishlist(){
   const list = S.wishlist.filter(w => !areaPref || w.area===areaPref);
 
   let html = `<div class="sec-h"><div class="sec-t">🧺 밥바구니</div><div class="sec-sub">${S.wishlist.length}곳</div></div>`;
+  html += `<input id="wishPhotoInput" type="file" accept="image/*" style="display:none" onchange="onWishPhotoPick(event)">`;
   html += `<div style="padding:0 18px 12px"><button class="btn-s" onclick="promptNewWish()">+ 가고 싶은 곳 추가</button></div>`;
   html += `<div class="pad" style="padding-top:0;padding-bottom:4px">
     <div class="field" style="margin-bottom:0"><label>오늘 나 지금 어디 근처야?</label>
@@ -941,6 +1080,7 @@ function renderWishlist(){
   } else {
     list.forEach(w=>{
       html += `<div class="card" style="cursor:default">
+        ${w.photo?`<img class="wish-photo" src="${esc(w.photo)}" alt="밥바구니 사진" onclick="openPhoto(decodeURIComponent('${encodeURIComponent(w.photo)}'))">`:''}
         <div class="rname">${esc(w.name)}</div>
         <div class="rmeta">${esc(w.area||'')} · ${esc(w.nick)} 담음 · ${fmt(w.ts)}</div>
         ${w.reason?`<div class="wish-reason">💬 ${esc(w.reason)}</div>`:''}
@@ -970,17 +1110,70 @@ function onWishAreaChange(v){
   localStorage.setItem('bab2:lastArea', v);
   renderWishlist();
 }
-async function promptNewWish(){
+// 텍스트는 prompt로 받고(동기 → 사용자 제스처 유지), 사진 첨부 시 파일 선택창을 동기적으로 열어야 하므로
+// 저장은 사진 선택 이후(onWishPhotoPick) 또는 사진 없이(즉시) saveWish로 처리한다.
+function promptNewWish(){
   const name = prompt('가고 싶은 곳 이름을 알려줘 🧺 (예: 을지로 한국관)');
   if(!name || !name.trim()) return;
   const area = prompt('동네는? (예: 을지로)', S.wishArea||'') || '';
   const reason = prompt('왜 가고 싶어? 🍙\n예: 여자친구랑 가고 싶어 💕 / 부모님이랑 가고 싶어 👨‍👩‍👧', '') || '';
   const data = { name:name.trim().slice(0,30), area:area.trim().slice(0,15), reason:reason.trim().slice(0,60), nick:S.nick, ts:Date.now() };
+  // 사진 첨부는 선택 — 확인 시 파일 선택창(동기 호출), 취소 시 사진 없이 바로 저장
+  const wantPhoto = confirm('사진도 한 장 첨부할까요? 📷 (선택)\n확인 = 사진 고르기 / 취소 = 사진 없이 저장');
+  if(wantPhoto){
+    const inp = $('wishPhotoInput');
+    if(inp){
+      S._pendingWish = data;
+      S._wishHandled = false;
+      // 파일 대화상자를 닫기만 하고 선택하지 않은 경우(취소) 대비 — 포커스 복귀 시 사진 없이 저장
+      const onFocus = ()=>{
+        window.removeEventListener('focus', onFocus);
+        setTimeout(()=>{
+          if(!S._wishHandled && S._pendingWish){
+            const d = S._pendingWish; S._pendingWish = null; S._wishHandled = true;
+            saveWish(d, null);
+          }
+        }, 400);
+      };
+      window.addEventListener('focus', onFocus);
+      inp.click();
+      return;
+    }
+  }
+  saveWish(data, null);
+}
+async function onWishPhotoPick(ev){
+  const file = (ev.target.files || [])[0];
+  ev.target.value = '';
+  if(S._wishHandled) return;
+  const data = S._pendingWish;
+  if(!data) return;
+  S._wishHandled = true; S._pendingWish = null;
+  let blob = null;
+  if(file && file.type && file.type.startsWith('image/')){
+    try{ blob = await resizeImage(file, 1200); }catch(e){ console.error(e); toast('사진을 불러오지 못했어요'); }
+  }
+  saveWish(data, blob);
+}
+async function saveWish(data, blob){
+  // 사진 먼저 업로드 후, photo 포함해 create 한 번 (wishlist update 규칙 불필요)
+  let photoUrl = null;
+  if(blob){
+    toast('<span class="spin"></span>사진 업로드 중...');
+    try{
+      photoUrl = await uploadBlob(`wishlist-photos/${Date.now()}_${Math.random().toString(36).slice(2,7)}/photo.jpg`, blob);
+    }catch(e){
+      console.error(e);
+      photoUrl = null;
+      toast('사진 업로드는 실패했지만 밥바구니엔 담을게요 🧺');
+    }
+  }
+  const doc = { ...data };
+  if(photoUrl) doc.photo = photoUrl;
   try{
-    const ref = await db.collection('wishlist').add(data);
-    const w = { id:ref.id, ...data };
-    if(!S.wishlist.find(x=>x.id===w.id)) S.wishlist.unshift(w);
-    toast(`${esc(w.name)} 밥바구니에 담았어요! 🧺`);
+    const ref = await db.collection('wishlist').add(doc);
+    if(!S.wishlist.find(x=>x.id===ref.id)) S.wishlist.unshift({ id:ref.id, ...doc });
+    toast(photoUrl ? '사진까지 담았어요! 📷🧺' : `${esc(data.name)} 밥바구니에 담았어요! 🧺`);
     renderWishlist();
   }catch(e){
     console.error(e);
